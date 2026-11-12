@@ -1,588 +1,150 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<title>期权历史行情 · OPTION TERMINAL</title>
-<style>
-  :root{
-    --bg:#08080a; --panel:#101013; --panel2:#15151a; --line:#26262c;
-    --gold:#d9a441; --gold-dim:#8a6a26;
-    --txt:#e9e6df; --dim:#8d8a83;
-    --up:#ff4d4f; --down:#2ecc71;
-    --vol:#4aa8ff; --iv:#b07cff; --oi:#38bdf8;
-    --mono:"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--mono);font-size:12px}
-  header{display:flex;align-items:center;gap:14px;padding:9px 16px;border-bottom:1px solid var(--line)}
-  .brand{color:var(--gold);font-weight:700;letter-spacing:.2em}
-  .ctl{display:flex;align-items:center;gap:6px;color:var(--dim)}
-  select,input{background:#0c0c0f;color:var(--txt);border:1px solid var(--line);padding:4px 7px;
-               font-family:var(--mono);font-size:12px;outline:none;border-radius:2px}
-  select:focus,input:focus{border-color:var(--gold-dim)}
-  .btn{background:#141208;color:var(--gold);border:1px solid var(--gold-dim);padding:3px 10px;
-       font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:2px}
-  .btn:hover{background:#1d1809}
-  .right{margin-left:auto;color:var(--dim)}
-
-  .quote{display:flex;gap:28px;align-items:baseline;padding:11px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
-  .qname{color:var(--gold);font-size:15px}
-  .qsub{color:var(--dim);font-size:11px;margin-top:3px}
-  .qitem{color:var(--dim)} .qitem b{color:var(--txt);margin-left:7px;font-size:15px}
-  .up{color:var(--up)} .dn{color:var(--down)}
-
-  .tq{background:var(--panel);border-bottom:1px solid var(--line)}
-  .tq-head{display:flex;justify-content:space-between;align-items:center;padding:7px 16px;
-           color:var(--dim);border-bottom:1px solid var(--line)}
-  .tq-head b{color:var(--txt)} .gold{color:var(--gold)}
-  .sideline{display:flex;justify-content:space-between;padding:6px 16px 0;font-size:10px;
-            color:var(--dim);letter-spacing:.12em}
-  .tq-grid{display:grid;grid-template-columns:1fr 140px 1fr}
-  .pane{overflow-x:auto;overflow-y:hidden;position:relative;scrollbar-width:thin;overscroll-behavior-x:contain}
-  .pane::-webkit-scrollbar{height:6px}
-  .pane::-webkit-scrollbar-thumb{background:#2f2f37;border-radius:3px}
-  table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
-  th{font-weight:500;padding:0 8px;height:27px;line-height:27px;white-space:nowrap;
-     border-bottom:1px solid var(--gold-dim);color:var(--dim);text-align:right}
-  th.bh{width:36px;min-width:36px;max-width:36px}
-  td{padding:0 8px;height:25px;line-height:25px;border-bottom:1px solid #17171b;
-     text-align:right;white-space:nowrap;box-sizing:border-box}
-  tbody tr{height:25px}
-  td.greek{color:#b9b5ad}
-  td.bcol{width:36px;min-width:36px;max-width:36px;text-align:center;padding:0 2px}
-  tbody tr{cursor:pointer}
-  tbody tr:hover{background:#15151a}
-  tbody tr.sel{background:#24374f}
-  tbody tr.sel td{color:#f2f7ff;font-weight:600}
-  #paneC tbody tr.sel{box-shadow:inset -4px 0 0 #4c8dff}
-  #paneP tbody tr.sel{box-shadow:inset 4px 0 0 #4c8dff}
-  .kcol{background:#0f0f0a;border-left:1px solid var(--line);border-right:1px solid var(--line)}
-  .kcol th.kh{color:var(--gold);text-align:center;font-weight:600}
-  .kcol td.kv{text-align:center;color:var(--gold);font-weight:600;padding:0 6px;
-              height:25px;line-height:25px;box-sizing:border-box}
-  .kcol table{table-layout:fixed;width:100%}
-  .kcol td.kv.atm{background:#1c1708;box-shadow:inset 3px 0 0 var(--gold),inset -3px 0 0 var(--gold)}
-  .kcol tbody tr.sel td.kv{background:#2563eb;color:#fff;
-                box-shadow:inset 2px 0 0 #93c5fd,inset -2px 0 0 #93c5fd}
-  .kcol td.kv em{font-style:normal;font-size:9px;line-height:1;margin-left:4px;opacity:.85}
-
-  .c-delta{width:60px;min-width:60px}
-  .c-iv{width:60px;min-width:60px}
-  .c-volume,.c-oi_web{width:56px;min-width:56px}
-  .c-pre_settle,.c-pre_close,.c-open,.c-high,.c-low,.c-close{width:62px;min-width:62px}
-  .c-change_pct{width:68px;min-width:68px}
-  .c-badge{width:36px;min-width:36px;max-width:36px}
-  .badge{display:inline-block;padding:0 4px;border-radius:2px;font-size:10px;line-height:15px;font-weight:700}
-  .badge.up-b{background:rgba(255,77,79,.16);color:#ff6b6d;border:1px solid rgba(255,77,79,.5)}
-  .badge.dn-b{background:rgba(46,204,113,.14);color:#43d787;border:1px solid rgba(46,204,113,.45)}
-
-  .charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px 18px}
-  .card{border:1px solid var(--line);background:var(--panel);min-width:0}
-  .card h3{margin:0;padding:7px 12px;font-size:12px;border-bottom:1px solid var(--line);
-           display:flex;justify-content:space-between;align-items:center}
-  .card h3 span{color:var(--dim);font-weight:400}
-  .hbar{padding:4px 12px;color:var(--dim);font-size:11px;white-space:nowrap;overflow:hidden;
-        border-bottom:1px solid #1b1b20;min-height:22px}
-  .hbar b{color:var(--txt);font-weight:600;margin-left:5px}
-  .legend{display:flex;gap:12px;padding:5px 12px;color:var(--dim);font-size:10px;flex-wrap:wrap}
-  .dot{display:inline-block;width:8px;height:8px;margin-right:4px;vertical-align:middle}
-  svg{display:block;width:100%}
-  .empty{padding:26px 12px;text-align:center;color:var(--dim);font-size:12px}
-</style>
+  <link rel="preload" href="fonts/inter-latin-3100e775e861.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/jetbrains-mono-latin-18be452724bf.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="fonts.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>期权历史行情 · OPTQ</title>
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="brand.css">
+  <link rel="stylesheet" href="option_history.css">
+  <link rel="stylesheet" href="access.css">
+  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="bootstrap.css">
+  <link rel="stylesheet" href="home-brand.css">
+  <link rel="stylesheet" href="navigation.css">
+  <link rel="stylesheet" href="tokens.css">
 </head>
-<body>
-
-<header>
-  <div class="brand">OPTION TERMINAL</div>
-  <div class="ctl">交易日 <select id="date"></select></div>
-  <div class="ctl">标的 <select id="code"></select></div>
-  <div class="ctl">到期 <select id="month"></select></div>
-  <div class="right" id="status"></div>
+<body data-dashboard-page="option_history">
+  <div id="accessGate" class="access-gate" role="status" aria-live="polite" hidden><section class="access-card"><div class="access-mark"><span class="brand-hi">OPT</span><span class="brand-tick">Q</span></div><h2 id="accessTitle">正在连接页面服务</h2><p id="accessCopy">正在读取页面配置，请稍候。</p><a class="access-action" id="accessAction" hidden></a><button type="button" class="access-action" id="accessRetry" hidden>重新检查</button><button type="button" class="access-action" id="bootstrapRetry" hidden>重新连接</button></section></div>
+  <main class="oh-app">
+<header class="app-header unified-header">
+<div class="brand">
+<a class="hitick-brand brand-word" href="./" aria-label="返回期权工作台首页"><span class="brand-hi">OPT</span><span class="brand-tick">Q</span></a>
+<h1 class="header-page-title">期权历史行情</h1>
+</div>
+<nav class="primary-navigation" aria-label="主导航">
+<a class="primary-navigation-link is-current" href="./" aria-current="page">期权历史行情</a>
+</nav>
+<div class="oh-header-actions"><span id="refreshStatus" role="status">历史行情</span><button class="oh-refresh" id="refresh" type="button">↻ <span>刷新</span></button></div>
+<button class="theme-toggle" type="button" data-theme-toggle aria-label="切换到浅色主题" title="切换到浅色主题">
+<svg class="theme-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<g class="theme-icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4L19 5"/></g>
+<path class="theme-icon-moon" d="M20.5 13.5A8.5 8.5 0 0 1 10.5 3.5a8.5 8.5 0 1 0 10 10Z"/>
+</svg>
+<span class="theme-toggle-label">深色</span>
+</button>
 </header>
-
-<div class="quote" id="quote"></div>
-
-<section class="tq">
-  <div class="tq-head">
-    <div id="tqtitle">期权链</div>
-    <div style="display:flex;gap:16px;align-items:center">
-      <span><span class="gold">涨TOP1-3</span> / <span class="gold">跌TOP1-3</span> = 本月涨跌幅前三</span>
-      <button class="btn" id="locateBtn">定位平值</button>
-    </div>
-  </div>
-  <div class="sideline"><span>认购 CALL ←</span><span>→ 认沽 PUT</span></div>
-  <div class="tq-grid">
-    <div class="pane" id="paneC"><table><thead><tr id="hcall"></tr></thead><tbody id="bodyC"></tbody></table></div>
-    <div class="kcol"><table><thead><tr><th class="kh">行权价</th></tr></thead><tbody id="kbody"></tbody></table></div>
-    <div class="pane" id="paneP"><table><thead><tr id="hput"></tr></thead><tbody id="bodyP"></tbody></table></div>
-  </div>
+<div class="oh-workspace">
+<section class="oh-filters" aria-label="历史行情筛选">
+<div class="oh-date-field"><span id="dateLabel">交易日</span><button id="dateTrigger" class="oh-date-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="tradingDayPicker" aria-labelledby="dateLabel dateValue" disabled><span id="dateValue">—</span><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="4.5" width="14" height="12.5" rx="2"/><path d="M6.5 2.5v4m7-4v4M3 8.5h14M6.5 11.5h2m3 0h2m-7 3h2"/></svg></button></div>
+<div class="oh-target-field"><span id="targetLabel">标的</span><button id="targetTrigger" class="oh-target-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="underlyingPicker" aria-labelledby="targetLabel targetSummary" disabled><span id="targetSummary">等待标的目录</span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="m3 5 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></div>
 </section>
-
-<section class="charts">
-  <div class="card">
-    <h3>标的分时 <span id="spotTitle">—</span></h3>
-    <div class="hbar" id="hbarSpot">—</div>
-    <div id="spotWrap"><svg id="spotChart" viewBox="0 0 720 250" height="250"></svg></div>
-    <div class="legend">
-      <span><i class="dot" style="background:#ff4d4f"></i>涨</span>
-      <span><i class="dot" style="background:#2ecc71"></i>跌</span>
-      <span><i class="dot" style="background:#e0a63a"></i>均价</span>
-      <span><i class="dot" style="background:#4aa8ff"></i>成交量</span>
-      <span id="lgAtmIV"><i class="dot" style="background:#b07cff"></i>ATM IV</span>
-    </div>
-  </div>
-  <div class="card">
-    <h3>期权分时 <span id="optTitle">—</span></h3>
-    <div class="hbar" id="hbarOpt">—</div>
-    <div id="optWrap"><svg id="optChart" viewBox="0 0 720 250" height="250"></svg></div>
-    <div class="legend">
-      <span><i class="dot" style="background:#ff4d4f"></i>涨</span>
-      <span><i class="dot" style="background:#2ecc71"></i>跌</span>
-      <span><i class="dot" style="background:#e0a63a"></i>均价</span>
-      <span><i class="dot" style="background:#4aa8ff"></i>成交量</span>
-      <span id="lgOptIV"><i class="dot" style="background:#b07cff"></i>合约 IV</span>
-      <span id="lgOptOI"><i class="dot" style="background:#38bdf8"></i>持仓量</span>
-    </div>
-  </div>
+<dialog id="tradingDayPicker" class="oh-calendar" aria-labelledby="calendarTitle" aria-modal="true">
+<div class="oh-picker-header"><h2 id="calendarTitle">选择交易日</h2><button id="calendarClose" class="oh-picker-close" type="button" aria-label="关闭交易日选择">×</button></div>
+<div class="oh-calendar-nav"><button id="calendarPrev" class="oh-calendar-nav-button" type="button" aria-label="上个月"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m10 4-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button><strong id="calendarMonth" aria-live="polite"></strong><button id="calendarNext" class="oh-calendar-nav-button" type="button" aria-label="下个月"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button></div>
+<table class="oh-calendar-grid" role="grid" aria-labelledby="calendarMonth"><thead><tr><th scope="col" aria-label="星期一">一</th><th scope="col" aria-label="星期二">二</th><th scope="col" aria-label="星期三">三</th><th scope="col" aria-label="星期四">四</th><th scope="col" aria-label="星期五">五</th></tr></thead><tbody id="calendarDays"></tbody></table>
+<p id="calendarStatus" class="oh-calendar-status" role="status"></p>
+</dialog>
+<dialog id="underlyingPicker" class="oh-picker" aria-labelledby="pickerTitle" aria-modal="true" data-step="target">
+<div class="oh-picker-header"><h2 id="pickerTitle">选择标的</h2><button id="pickerClose" class="oh-picker-close" type="button" aria-label="关闭标的选择">×</button></div>
+<label class="oh-picker-search"><span class="oh-sr-only">搜索标的</span><input id="targetSearch" type="search" placeholder="搜索名称、具体合约或交易所" aria-label="搜索标的" autocomplete="off"></label>
+<div class="oh-picker-trail"><button id="pickerBack" class="oh-text-button" type="button" hidden>‹ 返回</button><span id="pickerPath">标的 → 到期日 → 乘数</span></div>
+<div class="oh-picker-columns">
+<section class="oh-picker-column" id="targetPanel" aria-labelledby="targetPanelTitle"><h3 id="targetPanelTitle">标的</h3><div id="pickerTargetList" class="oh-picker-list"></div><p id="pickerNoResults" class="oh-picker-empty" hidden>没有匹配的标的，请更换名称或代码。</p></section>
+<section class="oh-picker-column" id="expiryPanel" aria-labelledby="expiryPanelTitle" hidden><h3 id="expiryPanelTitle">到期日</h3><div id="pickerExpiryList" class="oh-picker-list"></div></section>
+<section class="oh-picker-column" id="multiplierPanel" aria-labelledby="multiplierPanelTitle" hidden><h3 id="multiplierPanelTitle">合约乘数</h3><div id="pickerMultiplierList" class="oh-picker-list"></div></section>
+</div>
+<div class="oh-picker-footer">单一到期日或乘数自动选择；完成选择后更新行情。</div>
+</dialog>
+<section class="oh-summary" aria-label="标的行情" id="underlyingSummary"><div class="oh-summary-title"><span>标的行情</span><strong>—</strong></div></section>
+<div id="pageNotice" class="oh-notice" role="status" hidden></div>
+<section class="oh-panel oh-chain-panel" aria-labelledby="chainTitle">
+<div class="oh-panel-heading"><div><h2 id="chainTitle">期权历史链</h2><span id="chainMeta">按行权价排列 · 点击合约查看走势</span></div><button class="oh-text-button" type="button" id="locateAtm" disabled>定位平值</button></div>
+<div class="oh-chain-scroll" id="chainScroll" tabindex="0" role="region" aria-label="认购和认沽期权链，可左右滚动">
+<table class="oh-chain-table"><caption class="oh-sr-only">认购在左，行权价居中，认沽在右。同一行权价的多个合约分别保留。</caption><colgroup><col class="oh-leg-col"><col class="oh-strike-col"><col class="oh-leg-col"></colgroup><thead><tr><th class="oh-call" scope="col">CALL <span>认购期权</span></th><th class="oh-strike" id="strikeHeading" scope="col" rowspan="2" aria-sort="ascending"><button id="sortStrike" class="oh-text-button" type="button" aria-label="行权价升序，点击降序">行权价 ↑</button></th><th class="oh-put" scope="col">PUT <span>认沽期权</span></th></tr><tr><th><div class="oh-leg-viewport" data-scroll-side="call"><div id="callColumns" class="oh-quote-grid oh-call"></div></div></th><th><div class="oh-leg-viewport" data-scroll-side="put"><div id="putColumns" class="oh-quote-grid oh-put"></div></div></th></tr></thead><tbody id="chainRows"></tbody></table>
+</div>
+<div class="oh-empty" id="chainEmpty" role="status">正在加载期权链</div>
+<div class="oh-chain-footer"><span id="chainQuality"></span><div class="oh-replay-state"><span id="replayStatus" role="status">点击分时图回放期权链</span><span>← / → 切换时点</span><button id="exitReplay" class="oh-text-button" type="button" hidden>返回最新</button></div><span>IV / Greeks 取快照时刻的最新有效值 · 悬停查看时间 · 两侧可横向滑动</span></div>
 </section>
-
-<script>
-const $ = s => document.querySelector(s);
-const ROOT = location.pathname.replace(/\/+$/, "");
-const COLOR = {up:"#ff4d4f", down:"#2ecc71", avg:"#e0a63a", vol:"#4aa8ff", iv:"#b07cff", oi:"#38bdf8", px:"#e6e6e6"};
-let CHAIN = null, ROWS = [], SEL = null, MONTH = null, INTRADAY = null;
-
-const fmt = (v,d=4)=> (v===null||v===undefined||Number.isNaN(v)) ? "—" : Number(v).toFixed(d);
-const pct = v => (v===null||v===undefined) ? "—" : (v*100);
-const cls = v => v>0 ? "up" : v<0 ? "dn" : "";
-const compact = v => v>=1e8 ? (v/1e8).toFixed(2)+"亿" : v>=1e4 ? (v/1e4).toFixed(1)+"万" : String(Math.round(v));
-async function api(p){ const r = await fetch(ROOT+p); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-
-const CALL_COLS = [
-  ["delta","Δ","greek"],["iv","IV","greek"],["volume","成交量"],["oi_web","持仓量"],
-  ["pre_settle","昨结"],["pre_close","昨收"],["low","最低"],["high","最高"],["open","开盘"],
-  ["change_pct","涨跌%"],["close","最新价"],["__badge",""]
-];
-const PUT_COLS = [
-  ["__badge",""],["close","最新价"],["change_pct","涨跌%"],["open","开盘"],["high","最高"],
-  ["low","最低"],["pre_close","昨收"],["pre_settle","昨结"],["oi_web","持仓量"],["volume","成交量"],
-  ["iv","IV","greek"],["delta","Δ","greek"]
-];
-
-let META = null;
-
-async function boot(){
-  const meta = await api("/api/meta");
-  META = meta;
-  $("#code").innerHTML = meta.codes.map(c=>`<option value="${c.code}">${c.code}</option>`).join("");
-  $("#date").onchange = loadChain;
-  $("#month").onchange = ()=>{ MONTH = +$("#month").value; renderTable(); };
-  $("#locateBtn").onclick = ()=>{
-    const r = document.querySelector(".kcol td.kv.atm");
-    if(r) r.scrollIntoView({block:"center", behavior:"smooth"});
-  };
-  await loadDates();
-  $("#code").onchange = loadDates;      // 初始化完成后再挂，避免加载期间被触发
-  window.addEventListener("unhandledrejection", () => {   // 首次加载失败时自愈一次
-    if(!document.querySelector("#bodyC tr")) setTimeout(()=>boot().catch(()=>{}), 800);
-  });
-}
-
-async function loadDates(){
-  const {dates} = await api(`/api/dates?code=${$("#code").value}`);
-  if(!dates.length){ $("#status").textContent = "无数据"; return; }
-  $("#date").innerHTML = dates.slice().reverse()
-    .map(d=>`<option value="${d}">${String(d).replace(/(\d{4})(\d{2})(\d{2})/,"$1-$2-$3")}</option>`).join("");
-  const c = META && META.codes.find(x=>x.code === $("#code").value);
-  if(c && c.last1m && dates.includes(c.last1m)) $("#date").value = String(c.last1m);
-  await loadChain();
-}
-
-function preClose(r){ return (r.pre_close !== undefined && r.pre_close !== null) ? r.pre_close : (r.close - (r.change||0)); }
-
-let CHAIN_SEQ = 0, INTRA_SEQ = 0;
-let paneKey = null, scrollBound = false;
-
-// 认购/认沽两栏镜像同步：以中间行权价为中心，左边滚出多少，右边就滚进多少
-const PANE = { bound:false, maxC:1, maxP:1, expC:-1, expP:-1, raf:0, src:null };
-
-function refreshPaneMax(){
-  const pc = document.getElementById("paneC"), pp = document.getElementById("paneP");
-  if(!pc || !pp) return;
-  PANE.maxC = Math.max(1, pc.scrollWidth - pc.clientWidth);
-  PANE.maxP = Math.max(1, pp.scrollWidth - pp.clientWidth);
-}
-
-function bindScrollSync(){
-  if(PANE.bound) return;
-  PANE.bound = true;
-  const pc = document.getElementById("paneC"), pp = document.getElementById("paneP");
-
-  // 同步写入，不经过 rAF：滚动事件到达就立刻对齐，避免慢一帧的拖影感
-  const mirror = (src, dst, dstMax) => {
-    const target = Math.max(0, Math.min(dstMax, Math.round(dstMax - src.scrollLeft)));
-    if(Math.abs(dst.scrollLeft - target) > 0.5){
-      if(dst === pp) PANE.expP = target; else PANE.expC = target;
-      dst.scrollLeft = target;
-    }
-  };
-
-  pc.addEventListener("scroll", () => {
-    if(Math.abs(pc.scrollLeft - PANE.expC) <= 1){ PANE.expC = -1; return; }
-    mirror(pc, pp, PANE.maxP);
-  }, {passive:true});
-
-  pp.addEventListener("scroll", () => {
-    if(Math.abs(pp.scrollLeft - PANE.expP) <= 1){ PANE.expP = -1; return; }
-    mirror(pp, pc, PANE.maxC);
-  }, {passive:true});
-
-  window.addEventListener("resize", refreshPaneMax);
-}
-
-async function loadChain(){
-  const code = $("#code").value, date = +$("#date").value;
-  if(!code || !date) return;              // 下拉还没填好时直接跳过
-  const my = ++CHAIN_SEQ;
-  const chain = await api(`/api/chain?code=${code}&date=${date}`);
-  if(my !== CHAIN_SEQ) return;              // 更快的一次加载已经覆盖，丢弃这次结果
-  CHAIN = chain;
-  ROWS = CHAIN.rows.map(r=>({...r, pre_close: preClose(r)}));
-  const months = CHAIN.months;
-  $("#month").innerHTML = months.map(m=>`<option value="${m}">${String(m).slice(0,4)}年${String(m).slice(4)}月</option>`).join("");
-  MONTH = months[0];
-  // 默认选中：本月认购里最接近平值（标的价）的那张
-  const S0 = CHAIN.quote ? CHAIN.quote.close : null;
-  const cand = ROWS.filter(r=>r.s_month===MONTH && r.call_put==="C");
-  SEL = (S0 && cand.length ? cand.reduce((a,b)=>Math.abs(a.strike-S0)<=Math.abs(b.strike-S0)?a:b).code
-                           : (cand[0]||ROWS[0]).code);
-  renderQuote(); renderTable();
-  await loadIntraday();
-}
-
-function renderQuote(){
-  const q = CHAIN.quote;
-  if(!q){ $("#quote").innerHTML = `<div class="qname">${CHAIN.code}<span class="qsub"> 标的行情不可用</span></div>`; return; }
-  const chg = parseFloat(q.change);
-  $("#quote").innerHTML = `
-    <div><div class="qname">${q.targetname} · ${q.targetcode}</div>
-      <div class="qsub">ETF 标的 · ${CHAIN.date}</div></div>
-    <div class="qitem">最新价<b class="${cls(chg)}">${fmt(q.close,3)}</b></div>
-    <div class="qitem">涨跌幅<b class="${cls(chg)}">${fmt(chg,2)}%</b></div>
-    <div class="qitem">最高<b>${fmt(q.high,3)}</b></div>
-    <div class="qitem">最低<b>${fmt(q.low,3)}</b></div>
-    <div class="qitem">成交量<b>${compact(q.volume||0)}</b></div>`;
-  $("#status").textContent = `${CHAIN.date} · ${CHAIN.rows.length} 个合约`;
-}
-
-function monthRows(){ return ROWS.filter(r=>r.s_month===MONTH); }
-
-function computeBadges(){
-  const rows = monthRows().filter(r=>r.close>0 && r.change_pct!=null);
-  const sorted = [...rows].sort((a,b)=>b.change_pct-a.change_pct);
-  const map = new Map();
-  sorted.slice(0,3).forEach((r,i)=>map.set(r.code, {t:`涨${i+1}`, c:"up-b"}));
-  [...sorted].reverse().slice(0,3).forEach((r,i)=>map.set(r.code, {t:`跌${i+1}`, c:"dn-b"}));
-  return map;
-}
-
-function renderTable(){
-  const rows = monthRows();
-  const badges = computeBadges();
-  const byStrike = new Map();
-  rows.forEach(r=>{
-    if(!byStrike.has(r.strike)) byStrike.set(r.strike, {strike:r.strike, C:null, P:null});
-    byStrike.get(r.strike)[r.call_put] = r;
-  });
-  const list = [...byStrike.values()].sort((a,b)=>a.strike-b.strike);
-  const S = CHAIN.quote ? CHAIN.quote.close : null;
-
-  $("#hcall").innerHTML = CALL_COLS.map(([k,l])=> k==="__badge" ? '<th class="bh c-badge"></th>' : `<th class="c-${k}">${l}</th>`).join("");
-  $("#hput").innerHTML  = PUT_COLS.map(([k,l])=> k==="__badge" ? '<th class="bh c-badge"></th>' : `<th class="c-${k}">${l}</th>`).join("");
-
-  const cell = (r, key) => {
-    if(key === "__badge"){
-      const b = r ? badges.get(r.code) : null;
-      return `<td class="bcol c-badge">${b ? `<span class="badge ${b.c}">${b.t}</span>` : ""}</td>`;
-    }
-    if(!r) return `<td>—</td>`;
-    const v = r[key];
-    if(key === "change_pct"){
-      const p = (r.close>0 && v!=null) ? pct(v) : null;
-      return `<td class="${cls(p)} c-change_pct">${p===null?"—":(p>=0?"+":"")+p.toFixed(2)+"%"}</td>`;
-    }
-    if(key === "iv") return `<td class="greek c-iv">${v==null?"—":(v*100).toFixed(2)}</td>`;
-    if(key === "delta") return `<td class="greek c-delta">${fmt(v,3)}</td>`;
-    if(key === "volume" || key === "oi_web") return `<td class="c-${key}">${v==null?"—":compact(v)}</td>`;
-    if(key==="close"||key==="open"||key==="high"||key==="low"){
-      if(!(r.close>0) || !(v>0)) return `<td>—</td>`;   // 当日无成交：整行价格都显示 —
-    }
-    return `<td>${fmt(v,4)}</td>`;
-  };
-
-  $("#bodyC").innerHTML = list.map(g=>{
-    const itm = S && g.strike < S ? "style=\"background:#0e0b0b\"" : "";
-    const sel = SEL && g.C && g.C.code === SEL ? "sel" : "";
-    return `<tr class="${sel}" data-code="${g.C?g.C.code:''}" ${itm}>` +
-      CALL_COLS.map(([k])=>cell(g.C,k)).join("") + "</tr>";
-  }).join("");
-
-  $("#bodyP").innerHTML = list.map(g=>{
-    const itm = S && g.strike > S ? "style=\"background:#0b0e0d\"" : "";
-    const sel = SEL && g.P && g.P.code === SEL ? "sel" : "";
-    return `<tr class="${sel}" data-code="${g.P?g.P.code:''}" ${itm}>` +
-      PUT_COLS.map(([k])=>cell(g.P,k)).join("") + "</tr>";
-  }).join("");
-
-  $("#kbody").innerHTML = list.map(g=>{
-    const near = S && Math.abs(g.strike - S) === Math.min(...list.map(x=>Math.abs(x.strike - S)));
-    const isSel = (g.C && g.C.code===SEL) || (g.P && g.P.code===SEL);
-    return `<tr class="${isSel?'sel':''}"><td class="kv ${near?'atm':''}">${g.strike.toFixed(3)}${near?'<em>平值</em>':''}</td></tr>`;
-  }).join("");
-
-  document.querySelectorAll("tbody tr").forEach(tr=>{
-    tr.onclick = ()=>{ const c = tr.dataset.code; if(c){ SEL = c; renderTable(); loadIntraday(); } };
-  });
-
-  $("#tqtitle").innerHTML = `期权链 <b>${CHAIN.date}</b> · 到期 <b>${MONTH}</b> · ${rows.length} 个合约`
-    + `<span class="unitnote">&nbsp;· 量/仓单位：张（1 张 = 10000 份）</span>`;
-
-  // 初始滚动：认购贴右（最新价靠行权价），认沽贴左；两栏镜像同步
-  const pc = $("#paneC"), pp = $("#paneP");
-  bindScrollSync();
-  requestAnimationFrame(()=>{
-    const key = `${$("#code").value}|${$("#date").value}|${MONTH}`;
-    if(key !== paneKey){                       // 换标的/换日期/换月份才回到默认位置
-      paneKey = key;
-      pc.scrollLeft = pc.scrollWidth; pp.scrollLeft = 0;
-    }
-    document.querySelector("#paneC tr.sel")?.scrollIntoView({block:"nearest"});
-    document.querySelector("#paneP tr.sel")?.scrollIntoView({block:"nearest"});
-    document.querySelector("#kbody tr.sel")?.scrollIntoView({block:"nearest"});
-    refreshPaneMax();
-  });
-}
-
-async function loadIntraday(){
-  if(!SEL) return;
-  const code = $("#code").value, date = +$("#date").value;
-  const my = ++INTRA_SEQ;
-  let data = null;
-  try{
-    data = await api(`/api/intraday?code=${code}&date=${date}&contract=${SEL}&month=${MONTH}`);
-  }catch(e){ data = null; }
-  if(my !== INTRA_SEQ) return;              // 丢弃过期响应
-  INTRADAY = data;
-  renderCharts();
-}
-
-function renderCharts(){
-  const d = INTRADAY;
-  if(!d){ $("#spotWrap").innerHTML = '<div class="empty">数据加载失败</div>'; return; }
-
-  // 标的
-  if(d.spot.mode === "minute" && d.spot.bars.length){
-    $("#spotWrap").innerHTML = '<svg id="spotChart" viewBox="0 0 720 250" height="250"></svg>';
-    $("#spotTitle").textContent = `${d.code} · ${d.date}`;
-    drawChart({svg:"spotChart", bars:d.spot.bars, iv:d.atm_iv, ivLabel:"ATM IV", hover:"hbarSpot", dec:3, withOI:false,
-               legend:["lgAtmIV"], pre: CHAIN.quote ? CHAIN.quote.pre_close : null});
-  }else{
-    $("#spotWrap").innerHTML = '<div class="empty">该日无标的分钟数据</div>';
-    $("#spotTitle").textContent = `${d.code} · ${d.date}`;
-    $("#hbarSpot").textContent = "—";
-  }
-
-  // 期权
-  const meta = d.option.meta;
-  if(d.option.bars.length){
-    $("#optWrap").innerHTML = '<svg id="optChart" viewBox="0 0 720 250" height="250"></svg>';
-    $("#optTitle").textContent = meta
-      ? `${meta.name} · ${meta.call_put==="C"?"认购":"认沽"} K${meta.strike}`
-      : SEL;
-    const hasOI = d.option.bars.filter(b=>b.oi!=null).length > d.option.bars.length*0.3;
-    const selRow = ROWS.find(r=>r.code===SEL);
-    drawChart({svg:"optChart", bars:d.option.bars, iv:d.option.bars.map(b=>b.iv ?? null), pre: selRow ? selRow.pre_close : null,
-               ivLabel:"合约 IV", hover:"hbarOpt", dec:4, withOI:hasOI, mult:10000,
-               legend:["lgOptIV", ...(hasOI?["lgOptOI"]:[])]});
-  }else{
-    $("#optWrap").innerHTML = '<div class="empty">该合约无分钟数据</div>';
-    $("#hbarOpt").textContent = "—";
-  }
-}
-
-function meanSmooth(arr, win=9){
-  const out = arr.slice();
-  const half = Math.floor(win/2);
-  for(let i=0;i<arr.length;i++){
-    if(arr[i]==null) continue;
-    let sum=0, n=0;
-    for(let j=Math.max(0,i-half); j<=Math.min(arr.length-1,i+half); j++){
-      if(arr[j]!=null){ sum+=arr[j]; n++; }
-    }
-    if(n) out[i] = sum/n;
-  }
-  return out;
-}
-
-function smooth(arr, win=7){
-  const out = arr.slice();
-  for(let i=0;i<arr.length;i++){
-    if(arr[i]==null) continue;
-    const w = arr.slice(Math.max(0,i-3), i+4).filter(v=>v!=null).sort((a,b)=>a-b);
-    if(w.length) out[i] = w[Math.floor(w.length/2)];
-  }
-  return out;
-}
-
-function drawChart({svg, bars, iv, ivLabel, hover, dec, withOI, legend, mult=1, pre=null}){
-  if(iv){
-    iv = iv.map(v => (v!=null && v > 0.002) ? v : null);   // 0.0001 是解不出来的下限值
-    // 中间的缺口线性补齐，避免 IV 曲线断成一截一截
-    const idx = iv.map((v,i)=>v!=null?i:-1).filter(i=>i>=0);
-    for(let k=0;k+1<idx.length;k++){
-      const a=idx[k], b=idx[k+1];
-      for(let j=a+1;j<b;j++) iv[j] = iv[a] + (iv[b]-iv[a])*(j-a)/(b-a);
-    }
-    iv = meanSmooth(smooth(iv, 21), 9);
-  }
-  const el = document.getElementById(svg);
-  const n = bars.length;
-  const ivVals = (iv||[]).filter(v=>v!=null);
-  const ivMedian = ivVals.length ? ivVals.slice().sort((a,b)=>a-b)[Math.floor(ivVals.length/2)] : 0;
-  const hasIV = ivVals.length > 0 && ivMedian > 0.001;   // 0.0001 是“不可识别”的下限值
-  const W=720, H=250, pad={l:46,r: hasIV?44:10, t:10,b:16};
-  const valid = bars.filter(b=>b.close>0);
-  const lo = valid.map(b=>(b.low>0?b.low:b.close)), hi = valid.map(b=>(b.high>0?b.high:b.close));
-  let pmin = lo.length ? Math.min(...lo) : 0;
-  let pmax = hi.length ? Math.max(...hi) : 1;
-  if(pre>0 && isFinite(pre)){ pmin = Math.min(pmin, pre); pmax = Math.max(pmax, pre); }
-  if(pmax - pmin < Math.max(pmax * 1e-4, 1e-9)){        // 全天只有一个成交价：撑开一个可视区间
-    const pad0 = Math.max(pmax * 0.004, 0.0005);
-    pmin -= pad0; pmax += pad0;
-  }
-  const edge = (pmax - pmin) * 0.02;                    // 上下留 2% 余量，昨收线不贴边
-  pmin -= edge; pmax += edge;
-  const pspan = Math.max(pmax-pmin, 1e-9);
-  const volH = 34, oiH = withOI ? 24 : 0;
-  const priceBottom = H - pad.b - volH - oiH - 6;
-  const x = i => pad.l + (W-pad.l-pad.r) * i/Math.max(n-1,1);
-  const yP = v => pad.t + (priceBottom-pad.t) * (1-(v-pmin)/pspan);
-  const stepW = (W-pad.l-pad.r)/Math.max(n-1,1);
-  const bw = Math.max(stepW*0.82, 1.2);
-
-  // 均价
-  let cv=0, ca=0, avg=[];
-  let lastAvg = null;
-  bars.forEach(b=>{ cv += (b.vol||0); ca += (b.amount||0);
-    const a = cv>0 ? ca/cv/mult : null;
-    if(a!=null) lastAvg = a;
-    avg.push(lastAvg); });
-  let avgSegs=[], avgCur=null;
-  avg.forEach((v,i)=>{ if(v==null){ if(avgCur){avgSegs.push(avgCur);avgCur=null;} return; }
-    avgCur = avgCur ? avgCur+`L${x(i).toFixed(1)},${yP(v).toFixed(1)}` : `M${x(i).toFixed(1)},${yP(v).toFixed(1)}`; });
-  if(avgCur) avgSegs.push(avgCur);
-  const avgPath = avgSegs.join("");
-
-  // 价格折线（分时图标准画法：一条连续线）
-  let closePath = "";
-  bars.forEach((b,i)=>{
-    if(!(b.close>0)) return;
-    const yv = yP(b.close);
-    closePath += (closePath ? "L" : "M") + x(i).toFixed(1) + "," + yv.toFixed(1);
-  });
-  const lastClose = (()=>{ for(let i=bars.length-1;i>=0;i--) if(bars[i].close>0) return bars[i].close; return null; })();
-  const baseClose = pre>0 ? pre : (bars.find(b=>b.close>0)?.close ?? null);
-  const dayUp = (lastClose!=null && baseClose!=null) ? lastClose >= baseClose : true;
-  const pxColor = dayUp ? COLOR.up : COLOR.down;
-
-  // 量
-  const vmax = Math.max(...bars.map(b=>b.vol||0), 1);
-  const volTop = priceBottom + 6;
-  const volBars = bars.map((b,i)=>{
-    const h = volH*((b.vol||0)/vmax);
-    return `<rect x="${(x(i)-bw/2).toFixed(1)}" y="${(volTop+volH-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${COLOR.vol}" opacity="0.35"/>`;
-  }).join("");
-
-  // 持仓
-  let oiPath = "", oiTop = volTop+volH+4, oiRange=[0,1];
-  if(withOI){
-    const os = bars.map(b=>b.oi).filter(v=>v!=null);
-    if(os.length){
-      const omin = Math.min(...os), omax = Math.max(...os), osp = Math.max(omax-omin,1);
-      const yO = v => oiTop + oiH*(1-(v-omin)/osp);
-      const osegs=[]; let ocur=null;
-      bars.forEach((b,i)=>{ if(b.oi==null){ if(ocur){osegs.push(ocur);ocur=null;} return; }
-        ocur = ocur ? ocur+`L${x(i).toFixed(1)},${yO(b.oi).toFixed(1)}` : `M${x(i).toFixed(1)},${yO(b.oi).toFixed(1)}`; });
-      if(ocur) osegs.push(ocur);
-      oiPath = `<path d="${osegs.join("")}" fill="none" stroke="${COLOR.oi}" stroke-width="1"/>`;
-      oiRange=[omin,omax];
-    }
-  }
-
-  // IV 右轴
-  let ivPath = "", ivTicks = "";
-  if(hasIV){
-    const vs = iv.filter(v=>v!=null);
-    const imin = Math.min(...vs), imax = Math.max(...vs), isp = Math.max(imax-imin,1e-6);
-    const yIV = v => pad.t + (priceBottom-pad.t)*(1-(v-imin)/isp);
-    const segs=[]; let cur=null;
-    iv.forEach((v,i)=>{ if(v==null){ if(cur){segs.push(cur);cur=null;} return; }
-      cur = cur ? cur+`L${x(i).toFixed(1)},${yIV(v).toFixed(1)}` : `M${x(i).toFixed(1)},${yIV(v).toFixed(1)}`; });
-    if(cur) segs.push(cur);
-    ivPath = `<path d="${segs.join("")}" fill="none" stroke="${COLOR.iv}" stroke-width="1.2" opacity=".9"/>`;
-    ivTicks = [0,.5,1].map(f=>`<text x="${W-4}" y="${(yIV(imin+isp*f)+3).toFixed(1)}" fill="${COLOR.iv}" font-size="8" text-anchor="end">${((imin+isp*f)*100).toFixed(2)}%</text>`).join("");
-  }
-
-  const preLine = (pre>0 && isFinite(pre))
-    ? `<line x1="${pad.l}" y1="${yP(pre).toFixed(1)}" x2="${W-pad.r}" y2="${yP(pre).toFixed(1)}"
-            stroke="#c8a24a" stroke-width="0.8" stroke-dasharray="4 3" opacity="0.8"/>` : "";
-
-  const grid = [0,.25,.5,.75,1].map(f=>{
-    const v = pmin+pspan*f, yy = yP(v);
-    return `<line x1="${pad.l}" y1="${yy.toFixed(1)}" x2="${W-pad.r}" y2="${yy.toFixed(1)}" stroke="#1c1c22"/>
-            <text x="${pad.l-4}" y="${(yy+3).toFixed(1)}" fill="#8a867e" font-size="8" text-anchor="end">${v.toFixed(dec===3?3:4)}</text>`;
-  }).join("");
-
-  const xl = [0,60,120,180,240].filter(i=>i<n).map(i=>
-    `<text x="${x(i)}" y="${H-3}" fill="#6f6c66" font-size="8" text-anchor="middle">${bars[i].t}</text>`).join("");
-
-  if(legend){
-    const oiDrawn = withOI && bars.some(b=>b.oi!=null);
-    legend.forEach(id=>{
-      const node=document.getElementById(id); if(!node) return;
-      const hide = (id==="lgAtmIV" && !hasIV) || (id==="lgOptIV" && !hasIV) || (id==="lgOptOI" && !oiDrawn);
-      node.style.display = hide ? "none" : "";
-    });
-  }
-  el.innerHTML = `${grid}${preLine}${ivTicks}${volBars}${oiPath}
-    <path d="${closePath}" fill="none" stroke="${pxColor}" stroke-width="1.1" stroke-linejoin="round"/>
-    <path d="${avgPath}" fill="none" stroke="${COLOR.avg}" stroke-width="1.1"/>${ivPath}${xl}
-    <line id="${svg}-cross" x1="0" y1="${pad.t}" x2="0" y2="${H-pad.b}" stroke="#777" stroke-width="0.8" opacity="0"/>
-    <rect id="${svg}-hit" x="${pad.l}" y="${pad.t}" width="${W-pad.l-pad.r}" height="${H-pad.b-pad.t}" fill="transparent"/>`;
-
-  const hit = document.getElementById(svg+"-hit");
-  const cross = document.getElementById(svg+"-cross");
-  const hb = document.getElementById(hover);
-  const base = bars.find(b=>b.close!=null)?.close || 1;
-  hit.addEventListener("mousemove", ev=>{
-    const r = el.getBoundingClientRect();
-    const sx = (ev.clientX-r.left)/r.width*W;
-    let i = Math.round((sx-pad.l)/((W-pad.l-pad.r)/Math.max(n-1,1)));
-    i = Math.max(0, Math.min(n-1, i));
-    const b = bars[i];
-    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity","0.55");
-    const p = b.close!=null ? (b.close/base-1)*100 : null;
-    let html = `${b.t}　价格<b>${fmt(b.close,dec)}</b>` +
-      (p==null?"":` <span class="${cls(p)}">${p>=0?"+":""}${p.toFixed(2)}%</span>`) +
-      `　均价<b>${avg[i]==null?"—":fmt(avg[i],dec)}</b>　量<b>${compact(b.vol||0)}</b>`;
-    if(withOI && b.oi!=null) html += `　仓<b>${compact(b.oi)}</b>`;
-    if(hasIV && iv[i]!=null) html += `　${ivLabel}<b>${(iv[i]*100).toFixed(2)}%</b>`;
-    hb.innerHTML = html;
-  });
-  hit.addEventListener("mouseleave", ()=>{ cross.setAttribute("opacity","0"); });
-}
-
-boot();
-</script>
+<section class="oh-charts" aria-label="标的与期权分时走势">
+<article class="oh-panel oh-chart-panel">
+<div class="oh-panel-heading"><div><h2>标的分时</h2><span id="underlyingTitle">选择标的</span></div><span class="oh-chip" id="underlyingBasePrice">基准 —</span></div>
+<div class="oh-chart-body">
+<div class="oh-chart-plot">
+<div class="oh-chart-readout" id="underlyingReadout">—</div>
+<div class="oh-chart-stage"><div id="underlyingChart" class="oh-chart" aria-label="标的分钟价格、均价、成交量和持仓量图"></div><div id="underlyingEmpty" class="oh-chart-empty">选择标的查看当日分时</div></div>
+<div class="oh-chart-foot"><span class="oh-price-key" title="高于昨结价为红色，低于为绿色；昨结缺失时使用昨收">价格</span><span class="oh-average-key">均价</span><span class="oh-volume-key">成交量</span><span class="oh-interest-key" id="underlyingInterestKey">持仓量</span></div>
+<div class="oh-iv-readout"><span class="oh-iv-key">ATM IV · 右轴</span><span id="underlyingIvReadout">—</span></div>
+</div>
+<aside id="underlyingSnapshot" class="oh-snapshot" aria-label="标的分钟快照">
+<div class="oh-snapshot-header">
+<div class="oh-snapshot-heading"><h3>分钟快照</h3><span id="underlyingSnapshotTime">—</span></div>
+</div>
+<div class="oh-snapshot-depth">
+<div class="oh-book-heading"><span>档位</span><span>价格</span><span>挂单量</span></div>
+<div id="underlyingSnapshotBook" class="oh-book" role="table" aria-label="买卖一档盘口"></div>
+<div id="underlyingSnapshotBalance" class="oh-book-balance" data-state="empty" role="row"><div role="cell" aria-colspan="3">
+<div id="underlyingSnapshotBalanceBar" class="oh-book-balance-bar" role="img" aria-label="暂无买卖挂单比例"><i></i></div>
+</div></div>
+</div>
+<dl class="oh-snapshot-metrics">
+<div class="oh-snapshot-last"><dt>最新价</dt><dd id="underlyingSnapshotPrice">—</dd></div>
+<div><dt>当日均价</dt><dd id="underlyingSnapshotAveragePrice">—</dd></div>
+<div><dt>涨跌</dt><dd id="underlyingSnapshotChange">—</dd></div>
+<div><dt>涨跌幅</dt><dd id="underlyingSnapshotChangePct">—</dd></div>
+<div id="underlyingSnapshotInterest"><dt>持仓量</dt><dd id="underlyingSnapshotOpenInterest">—</dd></div>
+<div><dt>分钟成交量</dt><dd id="underlyingSnapshotMinuteVolume">—</dd></div>
+<div><dt>当日累计量</dt><dd id="underlyingSnapshotCumulativeVolume">—</dd></div>
+</dl>
+</aside>
+</div>
+</article>
+<article class="oh-panel oh-chart-panel">
+<div class="oh-panel-heading"><div><h2>期权分时</h2><span id="intradayTitle">选择期权合约</span></div><span class="oh-chip" id="basePrice">基准 —</span></div>
+<div class="oh-chart-body">
+<div class="oh-chart-plot">
+<div class="oh-chart-readout" id="intradayReadout">—</div>
+<div class="oh-chart-stage"><div id="intradayChart" class="oh-chart" aria-label="分钟价格、均价、成交量和持仓量图"></div><div id="intradayEmpty" class="oh-chart-empty">点击上方 Call 或 Put 合约查看分时</div></div>
+<div class="oh-chart-foot"><span class="oh-price-key" title="高于昨结价为红色，低于为绿色；昨结缺失时使用昨收">价格</span><span class="oh-average-key">均价</span><span class="oh-volume-key">成交量</span><span class="oh-interest-key" id="intradayInterestKey">持仓量</span></div>
+<div class="oh-iv-readout"><span class="oh-iv-key">合约 IV · 右轴</span><span id="intradayIvReadout">—</span></div>
+</div>
+<aside id="intradaySnapshot" class="oh-snapshot" aria-label="期权分钟快照">
+<div class="oh-snapshot-header">
+<div class="oh-snapshot-heading"><h3>分钟快照</h3><span id="intradaySnapshotTime">—</span></div>
+</div>
+<div class="oh-snapshot-depth">
+<div class="oh-book-heading"><span>档位</span><span>价格</span><span>挂单量</span></div>
+<div id="intradaySnapshotBook" class="oh-book" role="table" aria-label="买卖一档盘口"></div>
+<div id="intradaySnapshotBalance" class="oh-book-balance" data-state="empty" role="row"><div role="cell" aria-colspan="3">
+<div id="intradaySnapshotBalanceBar" class="oh-book-balance-bar" role="img" aria-label="暂无买卖挂单比例"><i></i></div>
+</div></div>
+</div>
+<dl class="oh-snapshot-metrics">
+<div class="oh-snapshot-last"><dt>最新价</dt><dd id="intradaySnapshotPrice">—</dd></div>
+<div><dt>当日均价</dt><dd id="intradaySnapshotAveragePrice">—</dd></div>
+<div><dt>涨跌</dt><dd id="intradaySnapshotChange">—</dd></div>
+<div><dt>涨跌幅</dt><dd id="intradaySnapshotChangePct">—</dd></div>
+<div id="intradaySnapshotInterest"><dt>持仓量</dt><dd id="intradaySnapshotOpenInterest">—</dd></div>
+<div><dt>分钟成交量</dt><dd id="intradaySnapshotMinuteVolume">—</dd></div>
+<div><dt>当日累计量</dt><dd id="intradaySnapshotCumulativeVolume">—</dd></div>
+</dl>
+</aside>
+</div>
+</article>
+</section>
+</div>
+</main>
+<script type="application/json" id="dashboardConfig">{"enabled":true,"priceVolEnabled":false,"apiBase":".","authRequired":false}</script>
+<script src="boot.js"></script>
+<script src="lightweight-charts.js"></script>
+<script src="option_history_model.js"></script>
+<script src="option_history_api.js"></script>
+<script src="option_history_calendar.js"></script>
+<script src="option_history_picker.js"></script>
+<script src="option_history_charts.js"></script>
+<script src="option_history.js"></script>
 </body>
 </html>

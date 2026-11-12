@@ -315,8 +315,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _static(self, folder: str, rel: str):
-        base = (Path(__file__).parent / folder).resolve()
+    def _static(self, rel: str):
+        base = Path(__file__).parent.resolve()
         f = (base / (rel.lstrip("/") or "index.html")).resolve()
         if (f == base or base in f.parents) and f.is_file():
             ctype = {".html": "text/html; charset=utf-8", ".js": "application/javascript; charset=utf-8",
@@ -330,20 +330,19 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         u = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
-        if u.path in ("/v2", "/v3"):
-            self.send_response(302)
-            self.send_header("Location", u.path.lstrip("/") + "/" + (f"?{u.query}" if u.query else ""))
-            return self.end_headers()
-        if u.path.startswith("/v3/api/v1/"):
-            code, payload = v3_api.handle(u.path[len("/v3/api/v1/"):].strip("/"), q)
+        # V3 核心 API (支持 /api/v1/* 和 /v3/api/v1/*)
+        api_prefix = "/api/v1/" if u.path.startswith("/api/v1/") else ("/v3/api/v1/" if u.path.startswith("/v3/api/v1/") else None)
+        if api_prefix:
+            code, payload = v3_api.handle(u.path[len(api_prefix):].strip("/"), q)
             return self._send(payload, code=code)
-        if u.path.startswith("/v3/"):
-            return self._static("v3", u.path[len("/v3/"):])
-        if u.path.startswith("/v2"):
-            return self._static("v2", u.path[len("/v2"):])
-        if u.path in ("/", "/index.html"):
+        # 静态文件（HTML / CSS / JS / Fonts）
+        if u.path in ("/", "/index.html", ""):
             return self._send((Path(__file__).parent / "index.html").read_bytes(),
                               ctype="text/html; charset=utf-8")
+        rel_path = u.path[len("/v3/"):].lstrip("/") if u.path.startswith("/v3/") else u.path.lstrip("/")
+        target_file = (Path(__file__).parent / rel_path).resolve()
+        if target_file.is_file():
+            return self._static(rel_path)
         if u.path == "/api/meta":
             codes = sorted({x.split("/")[0] for x in _remote_index()
                             if x.endswith("/data.parquet") and "/1d/" in x})
