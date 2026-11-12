@@ -127,19 +127,58 @@
    }
    ```
 
----
+### 3.3 自动化增量维护配置 (Daily Incremental Setup)
 
-## 4. 自动化增量运维 (Daily Incremental Pipeline)
+盘后数据自动增量同步遵循**单一调度入口**原则，无需人工干预，通过 Linux Systemd Timer 或 Crontab 每天 18:30 自动执行：
 
-系统设计遵循**单一入口调度**，每天盘后自动增量，无需人工介入：
+#### 1. 增量脚本清单 (`scripts/` 目录)
+- `daily_increment.sh`：主控入口脚本，按顺序执行导入、云端补缺口、回写与索引刷新；
+- `import_spot_1m.py`：自动解析日间投放目录中的 ETF 现券分钟数据；
+- `fetch_spot_1m_em.py`：东方财富接口兜底抓取标的现券分钟数据（自动校准手数与份数换算）；
+- `fetch_opt_1m_em.py`：东方财富接口抓取 ETF 期权分钟数据（带 `--months 0` 全到期月份覆盖与防限流指数退避）；
+- `build_v3_catalog.py`：极轻量索引生成器（秒级执行），扫描全量日线更新 `_v3/` 目录索引。
 
-1. **唯一调度入口**：`quant-etl.timer` (周一至周五 18:30)。
-2. **执行流程**：
-   - 入口脚本：`scripts/daily_increment.sh`
-   - **步骤 1**：执行 `import_spot_1m.py`，自动导入日间投放目录 `/volume1/transfer/etf_1m_incoming` 的 ETF 标的分时；
-   - **步骤 2**：远程触发云端执行 `fetch_spot_1m_em.py` 与 `fetch_opt_1m_em.py`（东财 trends2 接口），补齐滞后的期权分钟线到暂存目录 `/tmp/optq_stage`；
-   - **步骤 3**：通过 `rsync --ignore-existing` 将暂存文件同步回 NAS Web 库（每天增量仅约 10MB）；
-   - **步骤 4**：执行 `build_v3_catalog.py` 刷新 `_v3/` 索引，前端立即可见当日新行情。
+#### 2. 定时任务配置 (Systemd Timer 推荐)
+创建 `/etc/systemd/system/optq-incremental.service`：
+```ini
+[Unit]
+Description=OPTQ Daily Incremental Sync
+After=network.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/opt/optq/app
+ExecStart=/opt/optq/app/scripts/daily_increment.sh
+TimeoutSec=3600
+```
+
+创建 `/etc/systemd/system/optq-incremental.timer`：
+```ini
+[Unit]
+Description=Run OPTQ Daily Incremental Sync every trading day at 18:30
+
+[Timer]
+OnCalendar=Mon..Fri 18:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+启用定时器：
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now optq-incremental.timer
+systemctl list-timers optq-incremental.timer
+```
+*(如习惯使用 Crontab，可添加：`30 18 * * 1-5 /opt/optq/app/scripts/daily_increment.sh >> /var/log/optq_increment.log 2>&1`)*
+
+#### 3. 增量链路内部流转时序
+1. **Step 1 (本地标的分时导入)**：`import_spot_1m.py` 扫描本地投放目录 `/volume1/transfer/etf_1m_incoming`（如有迅投导出的当日 ETF 标的 1m 分钟包则解析入库）；
+2. **Step 2 (云端东财兜底抓取)**：触发 `fetch_spot_1m_em.py` 与 `fetch_opt_1m_em.py --months 0`，若白天本地未导出或期权分钟滞后，自动抓取当天 9 只标的及全部期权合约分钟线至临时暂存目录 `/tmp/optq_stage`；
+3. **Step 3 (轻量增量回写)**：执行 `rsync -a --ignore-existing` 将暂存分日文件写回 Web 库（每天增量约 18 个 parquet 文件，仅约 10MB），清空暂存区；
+4. **Step 4 (索引秒级刷新)**：执行 `build_v3_catalog.py` 更新 `_v3/catalog.parquet`，前端页面在不重启服务的情况下当天立即可见新交易日的日历与期权链。
 
 ---
 
