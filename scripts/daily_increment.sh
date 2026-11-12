@@ -29,7 +29,7 @@ echo "===== $(date '+%F %T') 增量补数开始 ====="
 ssh -o BatchMode=yes -o ConnectTimeout=10 cloud \
   "mkdir -p $STAGE && cd $CLOUD_APP && \
    OPT_PARQUET=$STAGE python3 fetch_spot_1m_em.py; \
-   OPT_PARQUET=$STAGE python3 fetch_opt_1m_em.py $FILTER --months 2 --sleep 0.3" \
+   OPT_PARQUET=$STAGE python3 fetch_opt_1m_em.py $FILTER --months 0 --sleep 0.15" \
   || echo "! 云端补数失败"
 
 # 3) 回写 NAS（只传新增的分日文件，通常 <10MB）
