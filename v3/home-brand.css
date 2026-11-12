@@ -1,0 +1,17 @@
+/* Original OrangeHitick artwork: white on dark surfaces, black on light. */
+.hitick-brand { display: inline-flex; align-items: center; flex: none; line-height: 1; text-decoration: none; }
+.hitick-brand img { flex: none; object-fit: contain; }
+.hitick-brand .hitick-wordmark { width: 156px; height: 30px; }
+.hitick-brand .hitick-wordmark-light,
+.hitick-brand .hitick-brand-mark { display: none; }
+.hitick-brand .hitick-wordmark-dark { display: block; }
+.hitick-brand .hitick-brand-mark { width: 30px; height: 30px; filter: invert(1); }
+:root[data-theme=light] .hitick-brand .hitick-wordmark-light { display: block; }
+:root[data-theme=light] .hitick-brand .hitick-wordmark-dark { display: none; }
+:root[data-theme=light] .hitick-brand .hitick-brand-mark { filter: none; }
+.hitick-brand:focus-visible { outline: 2px solid var(--accent, #ffd27a); outline-offset: 5px; border-radius: 3px; }
+@media (max-width: 600px) {
+  .hitick-brand .hitick-wordmark,
+  :root[data-theme=light] .hitick-brand .hitick-wordmark { display: none; }
+  .hitick-brand .hitick-brand-mark { display: block; }
+}

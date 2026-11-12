@@ -1,0 +1,114 @@
+/* Shared site navigation; page-specific controls remain separate. */
+.primary-navigation { display:flex; align-items:center; flex:none; gap:6px; white-space:nowrap; }
+.primary-navigation .primary-navigation-link {
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  min-height:38px; padding:0 12px; border:0; border-radius:5px;
+  background:transparent; color:var(--muted); text-decoration:none;
+  font:600 13px/1.2 var(--font-ui); letter-spacing:0; cursor:pointer;
+}
+.primary-navigation .primary-navigation-link:hover,
+.primary-navigation .primary-navigation-link[aria-expanded="true"] { color:var(--text); background:var(--hover); }
+.primary-navigation .primary-navigation-link[aria-current="page"],
+.primary-navigation .primary-navigation-link.is-current { color:var(--accent-ink); background:var(--soft); }
+.primary-navigation .primary-navigation-link:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.primary-navigation .page-switcher-menu { top:calc(100% + 6px); width:268px; }
+.primary-navigation .page-switcher-menu a { min-height:52px; padding:10px 12px; }
+.primary-navigation .page-switcher-copy { gap:4px; }
+.primary-navigation .page-switcher-copy strong { font-size:14px; }
+.primary-navigation .page-switcher-copy small { font-size:8px; }
+.header-page-title { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+
+#dashboardMain > header.unified-header,
+.unified-header:is(.app-header,.pv-header,.so-header,.account-header) {
+  display:grid; grid-template-columns:auto auto minmax(0,1fr) auto;
+  align-items:center; gap:16px; height:auto; min-height:58px; flex:0 0 auto;
+  padding:0 18px;
+}
+.unified-header > :is(.brand,.brand-lockup,.pv-brand,.so-brand) { min-width:0; padding-right:0; }
+.unified-header > :is(.header-side,.live-area,.pv-live,.so-header-actions,.oh-header-actions,.header-actions) { min-width:0; justify-self:end; margin-left:0; }
+#dashboardMain > header.unified-header > .theme-toggle,
+.unified-header:is(.app-header,.pv-header,.so-header) > .theme-toggle { position:static; }
+.account-header.unified-header { grid-template-columns:auto 1fr auto; }
+.account-header.unified-header > .primary-navigation { justify-self:start; margin-left:12px; }
+
+@media (max-width:1200px) {
+  #dashboardMain > header.unified-header,
+  .unified-header:is(.app-header,.pv-header,.so-header) {
+    grid-template-columns:auto minmax(0,1fr) auto; gap:8px 14px; padding:10px 12px 0;
+  }
+  .unified-header:not(.account-header) > :is(.brand,.pv-brand,.so-brand) { grid-column:1; grid-row:1; padding-right:0; }
+  .unified-header:not(.account-header) > :is(.header-side,.live-area,.pv-live,.so-header-actions,.oh-header-actions) { grid-column:2; grid-row:1; width:auto; }
+  .unified-header:not(.account-header) > .theme-toggle { grid-column:3; grid-row:1; }
+  .unified-header:not(.account-header) > .primary-navigation { grid-column:1/-1; grid-row:2; align-self:end; min-height:44px; border-top:1px solid var(--line); }
+  .app:has(> .unified-header) { grid-template-rows:auto auto minmax(0,1fr); }
+}
+@media (max-width:800px) {
+  .account-header.unified-header { grid-template-columns:1fr auto; gap:8px 12px; padding:10px 12px 0; }
+  .account-header.unified-header > .brand-lockup { grid-column:1; grid-row:1; }
+  .account-header.unified-header > .header-actions { grid-column:2; grid-row:1; }
+  .account-header.unified-header > .primary-navigation { grid-column:1/-1; grid-row:2; justify-self:stretch; margin:0; min-height:44px; border-top:1px solid var(--line); }
+}
+@media (max-width:600px) {
+  .primary-navigation { justify-content:space-between; gap:2px; }
+  .primary-navigation .primary-navigation-link { min-height:40px; padding:0 10px; }
+  #dashboardMain > header.unified-header,
+  .unified-header:is(.app-header,.pv-header,.so-header) { grid-template-columns:1fr auto; gap:8px 10px; padding:10px 10px 0; }
+  .unified-header:not(.account-header) > .theme-toggle { grid-column:2; }
+  .unified-header:not(.account-header) > :is(.header-side,.live-area,.pv-live,.so-header-actions,.oh-header-actions) { grid-column:1/-1; grid-row:3; justify-self:stretch; padding-bottom:8px; }
+  .unified-header:not(.account-header) > .primary-navigation { justify-self:stretch; }
+  .app:has(> .unified-header) { grid-template-rows:auto auto auto; }
+}
+
+/* Compact navigation replaces the extra navigation row, not page controls. */
+.primary-navigation-toggle { display:none; }
+@media (max-width:1200px) {
+  #dashboardMain > header.has-compact-navigation,
+  .has-compact-navigation:is(.app-header,.pv-header,.so-header,.account-header) {
+    grid-template-columns:auto minmax(0,1fr) auto auto;
+    padding:8px 12px; gap:8px; isolation:isolate; z-index:40;
+  }
+  .has-compact-navigation { position:relative; }
+  .has-compact-navigation > .primary-navigation-toggle {
+    display:inline-flex; align-items:center; justify-content:center;
+    grid-column:4; grid-row:1; width:44px; height:44px; padding:0;
+    color:var(--muted); background:transparent; border:1px solid var(--line); border-radius:5px;
+    cursor:pointer; flex-shrink:0;
+  }
+  .has-compact-navigation > .primary-navigation-toggle:hover,
+  .has-compact-navigation > .primary-navigation-toggle[aria-expanded="true"] { color:var(--text); background:var(--hover); }
+  .primary-navigation-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .primary-navigation-toggle .navigation-close-icon,
+  .primary-navigation-toggle[aria-expanded="true"] .navigation-menu-icon { display:none; }
+  .primary-navigation-toggle[aria-expanded="true"] .navigation-close-icon { display:block; }
+  .has-compact-navigation.unified-header > .primary-navigation {
+    display:none; position:absolute; z-index:50; top:calc(100% + 6px); right:12px;
+    width:min(320px,calc(100vw - 24px)); max-height:calc(100dvh - var(--primary-navigation-top,96px) - 12px);
+    overflow:auto; overscroll-behavior:contain; flex-direction:column; align-items:stretch;
+    margin:0; padding:8px; gap:4px; box-sizing:border-box; border:1px solid var(--line-strong);
+    border-radius:8px; background:var(--panel); white-space:normal;
+  }
+  .has-compact-navigation.navigation-open > .primary-navigation { display:flex; }
+  .has-compact-navigation .primary-navigation-link { min-height:44px; width:100%; justify-content:flex-start; font-size:14px; }
+  .has-compact-navigation .page-switcher { display:block; }
+  .has-compact-navigation .page-switcher-trigger { justify-content:space-between; }
+  .has-compact-navigation .primary-navigation .page-switcher-menu {
+    position:static; width:auto; margin:4px 0; padding:4px; border:0; border-radius:5px;
+    background:var(--bg); box-shadow:none;
+  }
+  .has-compact-navigation .primary-navigation .page-switcher-menu a { min-height:44px; }
+  .has-compact-navigation .primary-navigation .page-switcher-copy small { display:none; }
+  .account-header.has-compact-navigation { grid-template-columns:minmax(0,1fr) auto auto; }
+  .account-header.has-compact-navigation > .brand-lockup { grid-column:1; grid-row:1; }
+  .account-header.has-compact-navigation > .header-actions { grid-column:2; grid-row:1; }
+  .account-header.has-compact-navigation > .primary-navigation-toggle { grid-column:3; }
+}
+@media (max-width:600px) {
+  #dashboardMain > header.has-compact-navigation,
+  .has-compact-navigation:is(.app-header,.pv-header,.so-header) { grid-template-columns:minmax(0,1fr) auto auto; padding:8px 10px; }
+  .has-compact-navigation:not(.account-header) > .theme-toggle { grid-column:2; grid-row:1; }
+  .has-compact-navigation:not(.account-header) > .primary-navigation-toggle { grid-column:3; }
+  .has-compact-navigation:not(.account-header) > :is(.header-side,.live-area,.pv-live,.so-header-actions,.oh-header-actions) { grid-column:1/-1; grid-row:2; padding-bottom:0; }
+  .has-compact-navigation > .primary-navigation { right:10px; }
+  .account-header.has-compact-navigation .user-menu summary { min-width:44px; padding:6px; }
+  .account-header.has-compact-navigation :is(#userName,.user-chevron) { display:none; }
+}

@@ -1,0 +1,234 @@
+/* Shared IV line color for MQDQ detail and option history. */
+:root { --instrument-iv:#4182ee; }
+/* HiTick MQDQ R03: shared visual tokens. Page styles retain their existing layout. */
+:root {
+  color-scheme:dark;
+  --font-data:var(--font-mono);
+  --bg:#1C2327;
+  --panel:#222A2D;
+  --raised:#2B333A;
+  --hover:#323C42;
+  --text:#F2F4F7;
+  --muted:#BAC3CE;
+  --line:#39444B;
+  --line-strong:#687681;
+  --accent:#FFD078;
+  --accent-ink:#FFD078;
+  --accent-text:#231C0C;
+  --soft:#403725;
+  --up:#FF6687;
+  --down:#54DFC0;
+  --warning:#FFD078;
+  --warning-border:#9D814B;
+  --up-soft:#39282F;
+  --down-soft:#243A34;
+  --up-border:#995163;
+  --down-border:#3F8674;
+  --signal-long-1:#29262B;
+  --signal-long-2:#37292F;
+  --signal-long-3:#492F38;
+  --signal-long-4:#603742;
+  --signal-short-1:#23302E;
+  --signal-short-2:#253C36;
+  --signal-short-3:#274B40;
+  --signal-short-4:#2A5A4B;
+  --signal-up:#FF9AB2;
+  --signal-down:#82F2D5;
+  --signal-muted:#D8DFE8;
+  --period-long:#FFE7EB;
+  --period-long-bg:#A74458;
+  --period-short:#F2FFFA;
+  --period-short-bg:#2A816A;
+  --status-on:#231C0C;
+  --teal:#54DFC0;
+  --teal-strong:#3BBA9D;
+  --brand-hi-color:var(--accent);
+  --brand-hi-bg:transparent;
+  --chart-accent:#FFD078;
+  --chart-range:#929AA3;
+  --chart-range-fill:rgba(166,174,182,.18);
+  --chart-range-strong:#BCC3CA;
+  --chart-price:#F2F4F7;
+  --chart-label:#403725;
+  --chart-neutral:#A0A6AE;
+  --series-1:#4C9AFF;
+  --series-2:#FFAD32;
+  --series-3:#63D4C4;
+  --series-4:#BD75FF;
+  --series-5:#FF5799;
+  --series-6:#62DD62;
+  --series-7:#24CEFF;
+  --series-8:#8982FF;
+  /* Premium strength follows the theme's gold; negative values retain a distinct warm tone. */
+  --premium-positive:var(--accent-ink);
+  --premium-negative:#D9A18F;
+  --premium-surface:color-mix(in srgb,var(--panel),var(--accent) 4%);
+  --highlight:#FFFFFF;
+  --shadow-color:#000000;
+  --scrim:rgba(13,17,19,.65);
+  --panel-raised:var(--raised);
+  --panel-2:var(--raised);
+  --panel-3:var(--hover);
+  --neutral-bg:var(--raised);
+  --long:var(--up);
+  --short:var(--down);
+  --red:var(--up);
+  --green:var(--down);
+  --teal-2:var(--down);
+  --orange:var(--warning);
+  --context:var(--warning);
+  --faint:var(--muted);
+  --focus:var(--accent);
+}
+:root[data-theme="light"] {
+  color-scheme:light;
+  --bg:#F7F8FA;
+  --panel:#FFFFFF;
+  --raised:#F3F4F6;
+  --hover:#EAEDF0;
+  --text:#171B21;
+  --muted:#59616D;
+  --line:#D9DDE3;
+  --line-strong:#A9AFB8;
+  --accent:#FFC861;
+  --accent-ink:#8A5700;
+  --accent-text:#231C0C;
+  --soft:#FFF3D9;
+  --up:#D52550;
+  --down:#007F5A;
+  --warning:#8A5700;
+  --warning-border:#C59A4C;
+  --up-soft:#FCEEF1;
+  --down-soft:#EAF8F2;
+  --up-border:#D591A2;
+  --down-border:#78BBA4;
+  --signal-long-1:#FDF7F8;
+  --signal-long-2:#FCEEF1;
+  --signal-long-3:#FCE2E8;
+  --signal-long-4:#F9D4DD;
+  --signal-short-1:#F3FBF7;
+  --signal-short-2:#EAF8F2;
+  --signal-short-3:#DDF3E9;
+  --signal-short-4:#CCECDD;
+  --signal-up:#A51A3C;
+  --signal-down:#006245;
+  --signal-muted:#424C58;
+  --period-long:#842038;
+  --period-long-bg:#F8ADB9;
+  --period-short:#07573F;
+  --period-short-bg:#96DCC3;
+  --status-on:#231C0C;
+  --teal:#007F5A;
+  --teal-strong:#00654B;
+  --brand-hi-color:var(--accent-text);
+  --brand-hi-bg:var(--accent);
+  --chart-accent:#B87A0A;
+  --chart-range:#7B828A;
+  --chart-range-fill:rgba(126,134,142,.18);
+  --chart-range-strong:#5F6872;
+  --chart-price:#171B21;
+  --chart-label:#FFF3D9;
+  --chart-neutral:#858C94;
+  --series-1:#2766B3;
+  --series-2:#986000;
+  --series-3:#087D70;
+  --series-4:#8445B5;
+  --series-5:#B8316A;
+  --series-6:#387B2E;
+  --series-7:#087FA5;
+  --series-8:#6250AC;
+  --premium-negative:#9B4D37;
+  --shadow-color:#A8ADB5;
+  --scrim:rgba(33,38,44,.30);
+}
+html { background:var(--bg); }
+body { accent-color:var(--accent); }
+::selection { background:var(--soft); color:var(--text); }
+.brand-word:hover { color:var(--text); }
+.brand-word:hover .brand-hi { color:var(--brand-hi-color); }
+/* Theme stays in the same top-right position, independent of each page's actions. */
+#dashboardMain > header,.pv-header,.app-header,.so-header { padding-right:88px; }
+#dashboardMain > header > .theme-toggle,.pv-header > .theme-toggle,
+.app-header > .theme-toggle,.so-header > .theme-toggle {
+  position:absolute; top:13px; right:16px;
+}
+button.theme-toggle {
+  flex:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:31px;
+  padding:0 9px;
+  border:1px solid var(--line-strong);
+  border-radius:5px;
+  background:var(--raised);
+  color:var(--text);
+  font:600 10px/1 var(--font-ui);
+  white-space:nowrap;
+  cursor:pointer;
+}
+button.theme-toggle:hover { background:var(--soft); border-color:var(--accent); }
+button.theme-toggle:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.theme-toggle-icon { flex:none; width:15px; height:15px; color:var(--accent-ink); }
+.theme-icon-sun { display:none; }
+:root[data-theme="light"] .theme-icon-sun { display:initial; }
+:root[data-theme="light"] .theme-icon-moon { display:none; }
+/* Keep direction text legible on all four levels of the signal heatmap. */
+.instrument-row.signal-long,.instrument-row.signal-short { color:var(--text); }
+.instrument-row.signal-long .product-code,.instrument-row.signal-short .product-code,
+.instrument-row.signal-long .product-price,.instrument-row.signal-short .product-price { color:var(--signal-muted); }
+.product-change.up { color:var(--signal-up); }
+.product-change.down { color:var(--signal-down); }
+.event-tf.long { color:var(--period-long); background:var(--period-long-bg); }
+.event-tf.short { color:var(--period-short); background:var(--period-short-bg); }
+.point-dialog::backdrop,.so-dialog::backdrop,dialog::backdrop { background:var(--scrim); }
+/* Selection uses a warm surface with neutral text for both themes. */
+.feishu-scope-option[aria-pressed="true"],.feishu-strength-option[aria-pressed="true"],
+.pv-filter .classification-options button[aria-pressed="true"] { color:var(--text); }
+@media(max-width:760px) {
+  #dashboardMain > header > .theme-toggle,.pv-header > .theme-toggle,
+  .app-header > .theme-toggle,.so-header > .theme-toggle { top:10px; right:12px; }
+  .so-header { padding-right:12px; }
+  .so-header > .so-brand { padding-right:70px; }
+  button.theme-toggle { min-height:26px; padding:0 7px; font-size:9px; }
+  .theme-toggle-icon { width:14px; height:14px; }
+}
+/* Keep the existing mobile action rows full width below the brand. */
+@media(max-width:700px) {
+  #dashboardMain > header { padding-right:10px; }
+  #dashboardMain > header > .brand { padding-right:70px; }
+}
+@media(max-width:540px) {
+  .pv-header { padding-right:10px; }
+  .pv-header > .pv-brand { padding-right:70px; }
+}
+/* The term page needs a second header row before the chart layout changes. */
+@media(min-width:521px) and (max-width:760px) {
+  .app { grid-template-rows:82px auto auto; }
+  .app-header {
+    min-height:82px;
+    padding:8px 10px;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:center;
+    gap:7px;
+  }
+  .app-header > .brand { padding-right:70px; }
+  .app-header > .live-area { justify-content:stretch; }
+  .app-header .live { flex:1; min-width:0; }
+}
+@media(max-width:520px) {
+  .app-header { padding-right:10px; }
+  .app-header > .brand { padding-right:70px; }
+}
+@media(max-width:360px) {
+  .theme-toggle-label { display:none; }
+  #dashboardMain > header > .brand,.pv-header > .pv-brand,
+  .app-header > .brand,.so-header > .so-brand { padding-right:42px; }
+}
+@media(max-width:430px) {
+  button.theme-toggle { gap:4px; padding:0 6px; }
+}
+:root[data-theme="light"] .instrument-row:hover,
+:root[data-theme="light"] .event-card:hover { filter:brightness(.98); }

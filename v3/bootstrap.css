@@ -1,0 +1,22 @@
+/* Keep the shared navigation available before configuration or authentication succeeds. */
+body.access-pending main,body.access-denied main { display:block; }
+body.access-pending main > :not(header),body.access-denied main > :not(header) { display:none; }
+body[data-dashboard-page] .access-gate { position:fixed; inset:58px 0 0; z-index:5; min-height:0; overflow:auto; }
+body.access-pending > main > header,body.access-denied > main > header { min-height:58px; }
+body[data-dashboard-page] [hidden] { display:none!important; }
+body.dashboard-booting #accessRetry,body.dashboard-booting #accessAction { display:none!important; }
+body.dashboard-booting #refresh { pointer-events:none; opacity:.5; }
+body.dashboard-booting #healthText,body.dashboard-booting #liveText,body.dashboard-booting #refreshStatus,body.dashboard-booting #scanStatus { opacity:.65; }
+.dashboard-noscript { position:fixed; z-index:6; top:62%; left:24px; right:24px; text-align:center; color:var(--text); }
+@media(min-width:521px) and (max-width:760px) {
+  body[data-dashboard-page="sqrt_t"] .access-gate { top:82px; }
+  body[data-dashboard-page="sqrt_t"].access-pending > main > header,body[data-dashboard-page="sqrt_t"].access-denied > main > header { min-height:82px; }
+}
+@media(max-width:700px) {
+  body[data-dashboard-page="mqdq"] .access-gate { top:76px; }
+  body[data-dashboard-page="mqdq"].access-pending > main > header,body[data-dashboard-page="mqdq"].access-denied > main > header { min-height:76px; }
+}
+@media(max-width:520px) {
+  body[data-dashboard-page="sqrt_t"] .access-gate { top:76px; }
+  body[data-dashboard-page="sqrt_t"].access-pending > main > header,body[data-dashboard-page="sqrt_t"].access-denied > main > header { min-height:76px; }
+}
