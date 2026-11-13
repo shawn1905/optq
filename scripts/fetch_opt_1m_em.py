@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
-"""fetch_opt_1m_em.py — 用东财补期权分钟线（补全近期缺口）。
+"""fetch_opt_1m_em.py — 期权分钟线增量拉取（东财优先 + 新浪财经自动 Fallback 双引擎）。
 
-东财 trends2 一次给最近 5 个交易日的 1 分钟走势；期权 secid 市场号：
-  沪市期权 1000xxxx / 1001xxxx -> 10.<code>
-  深市期权 9000xxxx / 9001xxxx -> 12.<code>
+双引擎设计：
+  1. 首选：东方财富 trends2 接口（一次返回最近 5 日完整分时）；
+  2. 兜底 (Fallback)：当东财返回空、超时或限流（52 Empty reply）时，
+     自动切换至新浪财经官方接口（ak.option_finance_minute_sina），逐合约兜底补齐。
 
-单位与迅投一致：volume=张, amount=元。
-
-用法:
-  python3 fetch_opt_1m_em.py                 # 补最近 5 个交易日里缺的 1m 文件
-  python3 fetch_opt_1m_em.py --dates 20261111
-  python3 fetch_opt_1m_em.py --etf 159919 --dates 20261111
+字段统一标准：
+  target, code, date, minute, open, high, low, close, volume, amount, trades
+  单位：volume=张, amount=元。
 """
 import argparse
 import json
@@ -21,57 +19,75 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import akshare as ak
 import pandas as pd
 import pyarrow.parquet as pq
 
-# 数据源路径（读 1d 合约列表）
 DEFAULT_DATA_ROOT = "/opt/optq/cache" if Path("/opt/optq/cache").exists() else "/home/dahongge/Quant_Database/options/web_opt/parquet"
 DATA_ROOT = Path(os.environ.get("OPT_DATA_ROOT", DEFAULT_DATA_ROOT))
-# 目标输出路径（写 1m 分钟文件）
 OUT = Path(os.environ.get("OPT_PARQUET", "/home/dahongge/Quant_Database/options/web_opt/parquet"))
 
 ETFS = ["510050", "510300", "510500", "588000", "588080",
         "159901", "159915", "159919", "159922"]
-API = ("https://push2his.eastmoney.com/api/qt/stock/trends2/get"
-       "?secid={m}.{c}&fields1=f1,f2&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays=5&iscr=0")
+API_EM = ("https://push2his.eastmoney.com/api/qt/stock/trends2/get"
+          "?secid={m}.{c}&fields1=f1,f2&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays=5&iscr=0")
 
 
 def secid(code: str) -> str:
     # 1000xxxx / 1001xxxx -> 10 (上海)
     # 9000xxxx / 9001xxxx -> 12 (深圳)
-    return f"{10 if code.startswith('10') else 12}.{code}"
+    return f"{10 if str(code).startswith('10') else 12}.{code}"
 
 
-FAILS = 0
-
-
-def fetch(code: str) -> list[str]:
-    """带退避的重试，失败不永久熔断。"""
-    global FAILS
-    if FAILS >= 6:
-        time.sleep(2.0)
-    for attempt in range(4):
+def fetch_em(code: str) -> list[str]:
+    """东财 trends2 抓取。"""
+    url = API_EM.format(m=secid(code).split(".")[0], c=code)
+    for attempt in range(3):
         try:
-            url = API.format(m=secid(code).split(".")[0], c=code)
             out = subprocess.run(
-                ["curl", "-s", "-m", "15", "-A", "Mozilla/5.0", url],
+                ["curl", "-s", "-m", "10", "-A", "Mozilla/5.0", url],
                 capture_output=True, text=True,
             ).stdout
             d = json.loads(out).get("data")
             if d:
-                FAILS = 0
                 return d.get("trends") or []
         except Exception:
             pass
-        time.sleep(0.3 * (attempt + 1))
-    FAILS += 1
+        time.sleep(0.15 * (attempt + 1))
     return []
+
+
+def fetch_sina_fallback(code: str, want_dates: set[str], etf: str) -> list[dict]:
+    """新浪财经分时接口兜底 (Fallback)。"""
+    try:
+        df = ak.option_finance_minute_sina(symbol=code)
+        if df.empty or "date" not in df.columns:
+            return []
+        rows = []
+        for r in df.itertuples():
+            d_str = str(r.date).replace("-", "")
+            if d_str in want_dates:
+                px = float(r.price)
+                vol = int(float(r.volume))
+                amt = float(getattr(r, "average_price", px)) * vol * 10000
+                rows.append({
+                    "target": etf,
+                    "code": code,
+                    "date": int(d_str),
+                    "minute": str(r.time)[:5],
+                    "open": px, "high": px, "low": px, "close": px,
+                    "volume": vol,
+                    "amount": amt,
+                    "trades": 0,
+                })
+        return rows
+    except Exception:
+        return []
 
 
 def chain_codes(etf: str, day: int, traded_only: bool = False, months: int = 0) -> list[str]:
     f = DATA_ROOT / etf / "1d" / f"year={day // 10000}" / "data.parquet"
     if not f.exists():
-        # 如果当前位置没有，尝试另一个常见位置
         alt = Path("/home/dahongge/Quant_Database/options/web_opt/parquet") / etf / "1d" / f"year={day // 10000}" / "data.parquet"
         if alt.exists():
             f = alt
@@ -106,13 +122,28 @@ def bars_to_rows(etf: str, code: str, trends: list[str], dates: set[str]) -> lis
     return rows
 
 
+def fetch_contract_with_fallback(args):
+    c, etf, want_str, sleep_sec = args
+    # 1. 优先东财
+    trends = fetch_em(c)
+    rows = []
+    if trends:
+        rows = bars_to_rows(etf, c, trends, want_str)
+    # 2. 东财无数据时，自动触发新浪兜底
+    if not rows:
+        rows = fetch_sina_fallback(c, want_str, etf)
+    if sleep_sec:
+        time.sleep(sleep_sec)
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dates")
     ap.add_argument("--etf")
     ap.add_argument("--traded-only", action="store_true")
     ap.add_argument("--months", type=int, default=0, help="只补最近 N 个月份的合约（0=全部）")
-    ap.add_argument("--sleep", type=float, default=0.15)
+    ap.add_argument("--sleep", type=float, default=0.04)
     ap.add_argument("--force", action="store_true")
     a = ap.parse_args()
 
@@ -138,31 +169,23 @@ def main() -> int:
 
         codes = sorted({c for d in target_days
                         for c in chain_codes(etf, d, traded_only=a.traded_only, months=a.months)})
-        print(f"  {etf}: 准备拉取 {len(codes)} 个合约...")
+        print(f"  {etf}: 准备拉取 {len(codes)} 个合约 (带新浪 Fallback 机制)...")
         want_str = {str(d) for d in target_days}
 
-        def slow_fetch(c):
-            t = fetch(c)
-            if a.sleep:
-                time.sleep(a.sleep)
-            return t
+        work_items = [(c, etf, want_str, a.sleep) for c in codes]
+        all_contract_rows = []
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            for rows in ex.map(fetch_contract_with_fallback, work_items):
+                all_contract_rows.extend(rows)
 
-        with ThreadPoolExecutor(max_workers=3) as ex:
-            trends = dict(zip(codes, ex.map(slow_fetch, codes)))
-
-        rows = []
-        for c, t in trends.items():
-            rows.extend(bars_to_rows(etf, c, t, want_str))
-
-        if not rows:
-            print(f"  {etf}: 东财无可写数据")
+        if not all_contract_rows:
+            print(f"  ! {etf}: 双数据源均无可用分钟数据")
             continue
 
-        df = pd.DataFrame(rows)
+        df = pd.DataFrame(all_contract_rows)
         for day, g in df.groupby("date"):
             out_file = OUT / etf / "1m" / f"year={day//10000}" / f"{day}.parquet"
             out_file.parent.mkdir(parents=True, exist_ok=True)
-            # 保证含有标准列
             cols = ["target", "code", "date", "minute", "open", "high", "low", "close", "volume", "amount", "trades"]
             res = g[cols].sort_values(["minute", "code"]).reset_index(drop=True)
             res.to_parquet(out_file, index=False)
